@@ -16,11 +16,11 @@ from sklearn.metrics import multilabel_confusion_matrix
 
 
 
-def multiclass_classifier(X,y,model,list_of_classes,class_labels):
+def multiclass_classifier(X,y,model,list_of_classes):
     
     # Binarize the output
     y = label_binarize(y, classes=list_of_classes)
-    n_classes = y.shape[1]
+    n_classes = len(y)
 
 
     # shuffle and split training and test sets
@@ -29,7 +29,7 @@ def multiclass_classifier(X,y,model,list_of_classes,class_labels):
 
     # Learn to predict each class against the other
     classifier = OneVsRestClassifier(model)
-    y_score = classifier.fit(X_train, y_train).predict_proba(X_test)
+    y_score = classifier.fit(X_train, y_train).decision_function(X_test)
 
     # Compute ROC curve and ROC area for each class
     fpr = dict()
@@ -46,7 +46,7 @@ def multiclass_classifier(X,y,model,list_of_classes,class_labels):
     # First aggregate all false positive rates
     all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
 
-    # Then interpolate all ROC curves at these points
+    # Then interpolate all ROC curves at this points
     mean_tpr = np.zeros_like(all_fpr)
     for i in range(n_classes):
         mean_tpr += interp(all_fpr, fpr[i], tpr[i])
@@ -103,9 +103,15 @@ def multiclass_classifier(X,y,model,list_of_classes,class_labels):
     
     y_pred = classifier.predict(X_test)
             
-    mcm = multilabel_confusion_matrix(y_test,y_pred,labels=class_labels)                  
+    mcm = multilabel_confusion_matrix(y_test,y_pred)
+                  
     
     
     return mcm, print("One-vs-Rest ROC AUC scores:\n{:.6f} (macro),\n{:.6f} "
           "(weighted by prevalence)"
           .format(macro_roc_auc_ovr, weighted_roc_auc_ovr)), figure
+
+
+
+
+
