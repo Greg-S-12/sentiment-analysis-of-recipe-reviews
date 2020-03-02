@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import cycle
 from scipy import interp
-
 from sklearn import svm, datasets
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import train_test_split
@@ -14,18 +13,43 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import multilabel_confusion_matrix
 
+import re
+import nltk
+from nltk.corpus import stopwords
+
+# The regex code for the symbols and punctuation to be removed. We will simply remove the punctuation but
+# will replace the set of symbols with a space so we don'tjoin two separate words together!
+
+def remove_symbols(reviews):
+    replace_with_space = re.compile("(<br\s*/><br\s*/>)|(\-)|(\/)|(\n*\n)|(\r*\n)|(#&)")
+    reviews = [replace_with_space.sub(" ", i.lower()) for i in reviews]
+    
+    return reviews
+
+def remove_punctuation(reviews):
+    remove = re.compile("[.;:!\'?,\"()\[\]]")
+    reviews = [remove.sub("", i.lower() ) for i in reviews]
+    
+    return reviews
+
+def clean_text(df, text_columns):
+    """Makes all words lowercase and removes punctuation but will replace set of symbols with a space so we don't join two separate words together. """
+    
+    for text_column in text_columns:
+        df[text_column] = remove_symbols(df[text_column])
+        df[text_column] = remove_punctuation(df[text_column])
+    
+    return df
 
 
-def multiclass_classifier(X,y,model,list_of_classes,class_labels):
+
+
+def multiclass_classifier(X_train, X_test, y_train, y_test, model, list_of_classes, class_labels):
     
     # Binarize the output
-    y = label_binarize(y, classes=list_of_classes)
-    n_classes = y.shape[1]
+    y_train, y_test = label_binarize(y_train, classes=list_of_classes), label_binarize(y_test, classes=list_of_classes)
+    n_classes = len(class_labels)
 
-
-    # shuffle and split training and test sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2,
-                                                        random_state=42)
 
     # Learn to predict each class against the other
     classifier = OneVsRestClassifier(model)
@@ -105,7 +129,8 @@ def multiclass_classifier(X,y,model,list_of_classes,class_labels):
             
     mcm = multilabel_confusion_matrix(y_test,y_pred,labels=class_labels)                  
     
-    
-    return mcm, print("One-vs-Rest ROC AUC scores:\n{:.6f} (macro),\n{:.6f} "
+    print("One-vs-Rest ROC AUC scores:\n{:.6f} (macro),\n{:.6f} "
           "(weighted by prevalence)"
-          .format(macro_roc_auc_ovr, weighted_roc_auc_ovr)), figure
+          .format(macro_roc_auc_ovr, weighted_roc_auc_ovr)), print(figure), print(mcm)
+    
+    return classifier 
